@@ -34,6 +34,37 @@ def resolve_cluster_count(
     return len(set(true_labels.tolist()))
 
 
+def _sample_indices_preserving_clusters(
+    labels: np.ndarray,
+    sample_size: int,
+    random_state: int,
+) -> np.ndarray | None:
+    _, cluster_ids = np.unique(labels, return_inverse=True)
+    cluster_count = int(cluster_ids.max()) + 1
+    if cluster_count > sample_size:
+        return None
+
+    rng = np.random.default_rng(random_state)
+    sample_indices = rng.choice(len(labels), size=sample_size, replace=False)
+    sampled_cluster_ids = cluster_ids[sample_indices]
+    sampled_counts = np.bincount(sampled_cluster_ids, minlength=cluster_count)
+
+    for cluster_id in np.flatnonzero(sampled_counts == 0):
+        replaceable_positions = np.flatnonzero(
+            sampled_counts[sampled_cluster_ids] > 1
+        )
+        replace_position = int(rng.choice(replaceable_positions))
+        previous_cluster_id = sampled_cluster_ids[replace_position]
+        sampled_cluster_ids[replace_position] = cluster_id
+        sample_indices[replace_position] = rng.choice(
+            np.flatnonzero(cluster_ids == cluster_id)
+        )
+        sampled_counts[cluster_id] += 1
+        sampled_counts[previous_cluster_id] -= 1
+
+    return sample_indices
+
+
 def evaluate_dataset(
     dataset_path: Path,
     *,
