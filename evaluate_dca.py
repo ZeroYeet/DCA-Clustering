@@ -8,8 +8,10 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 from sklearn.metrics import (
     adjusted_rand_score,
+    davies_bouldin_score,
     normalized_mutual_info_score,
     silhouette_score,
 )
@@ -104,22 +106,40 @@ def evaluate_dataset(
     predicted_labels = result["labels"]
     predicted_cluster_count = len(set(predicted_labels.tolist()))
     silhouette = None
-    if 1 < predicted_cluster_count < len(predicted_labels):
-        silhouette = float(
-            silhouette_score(
-                features,
-                predicted_labels,
-                sample_size=min(2000, len(predicted_labels)),
-                random_state=random_state,
-            )
+    davies_bouldin_index = None
+    ari = None
+    sample_size = min(2000, len(predicted_labels))
+    if sample_size < len(predicted_labels):
+        sample_indices = _sample_indices_preserving_clusters(
+            predicted_labels,
+            sample_size,
+            random_state,
         )
+    else:
+        sample_indices = np.arange(len(predicted_labels))
+
+    if sample_indices is not None:
+        metric_features = features[sample_indices]
+        metric_labels = predicted_labels[sample_indices]
+        metric_cluster_count = len(set(metric_labels.tolist()))
+        if 1 < metric_cluster_count < len(metric_labels):
+            silhouette = float(
+                silhouette_score(metric_features, metric_labels) * 100
+            )
+            davies_bouldin_index = float(
+                davies_bouldin_score(metric_features, metric_labels)
+            )
+    if true_labels is not None:
+        ari = float(adjusted_rand_score(true_labels, predicted_labels))
 
     return {
         "dataset": dataset_path.name,
         "samples": features.shape[0],
         "features": features.shape[1],
         "clusters": predicted_cluster_count,
-        "silhouette": silhouette*100,
+        "silhouette": silhouette,
+        "davies_bouldin_index": davies_bouldin_index,
+        "ari": ari,
         "runtime_seconds": runtime_seconds,
         "iterations": result["iterations"],
     }
