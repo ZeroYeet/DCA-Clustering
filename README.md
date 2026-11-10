@@ -15,7 +15,7 @@ Place CSV files in `data\`. The repository includes:
 | --- | --- |
 | `bankCustomers.csv` | [BankCustomers dataset](https://gist.github.com/jrgamez/c9ea9e8a5d6d000619b31b8499af6a83#file-bankcustomers-csv) |
 | `bankVN80k.csv` | [Vietnam Bank Churn Dataset 2025](https://www.kaggle.com/datasets/tranhuunhan/vietnam-bank-churn-dataset-2025) |
-| `CC.csv` | [Credit Card Dataset for Clustering](hhttps://www.kaggle.com/datasets/arjunbhasin2013/ccdata) |
+| `CC.csv` | [Credit Card Dataset for Clustering](https://www.kaggle.com/datasets/arjunbhasin2013/ccdata) |
 
 The loader detects common CSV delimiters and, by default, infers whether the
 first row is a header. It treats the last column as the target label, excludes
