@@ -1,0 +1,2 @@
+dataset,samples,features,clusters,silhouette,runtime_seconds,iterations
+bankCustomers.csv,7081,36,3,14.10096673052967,9.773491500000091,44
