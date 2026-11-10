@@ -1,2 +1,2 @@
-dataset,samples,features,clusters,silhouette,runtime_seconds,iterations
-bankCustomers.csv,7081,36,3,14.10096673052967,9.773491500000091,44
+dataset,samples,features,clusters,silhouette,ari,runtime_seconds,iterations
+CC.csv,8950,16,5,0.31491750454322415,-0.007681239670661363,6.809318100000382,39

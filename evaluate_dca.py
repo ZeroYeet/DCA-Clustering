@@ -11,8 +11,6 @@ from typing import Any
 import numpy as np
 from sklearn.metrics import (
     adjusted_rand_score,
-    davies_bouldin_score,
-    normalized_mutual_info_score,
     silhouette_score,
 )
 
@@ -106,7 +104,6 @@ def evaluate_dataset(
     predicted_labels = result["labels"]
     predicted_cluster_count = len(set(predicted_labels.tolist()))
     silhouette = None
-    davies_bouldin_index = None
     ari = None
     sample_size = min(2000, len(predicted_labels))
     if sample_size < len(predicted_labels):
@@ -123,12 +120,7 @@ def evaluate_dataset(
         metric_labels = predicted_labels[sample_indices]
         metric_cluster_count = len(set(metric_labels.tolist()))
         if 1 < metric_cluster_count < len(metric_labels):
-            silhouette = float(
-                silhouette_score(metric_features, metric_labels) * 100
-            )
-            davies_bouldin_index = float(
-                davies_bouldin_score(metric_features, metric_labels)
-            )
+            silhouette = float(silhouette_score(metric_features, metric_labels))
     if true_labels is not None:
         ari = float(adjusted_rand_score(true_labels, predicted_labels))
 
@@ -138,7 +130,6 @@ def evaluate_dataset(
         "features": features.shape[1],
         "clusters": predicted_cluster_count,
         "silhouette": silhouette,
-        "davies_bouldin_index": davies_bouldin_index,
         "ari": ari,
         "runtime_seconds": runtime_seconds,
         "iterations": result["iterations"],
@@ -152,7 +143,6 @@ def print_results(results: list[dict[str, Any]]) -> None:
         ("features", "Features"),
         ("clusters", "Clusters"),
         ("silhouette", "Silhouette"),
-        ("davies_bouldin_index", "Davies-Bouldin"),
         ("ari", "ARI"),
         ("runtime_seconds", "Runtime (s)"),
     )
@@ -187,7 +177,7 @@ def save_plot(
 ) -> None:
     import matplotlib.pyplot as plt
 
-    metric_names = ("silhouette", "davies_bouldin_index", "ari")
+    metric_names = ("silhouette", "ari")
     metrics = [
         name
         for name in metric_names
@@ -281,7 +271,7 @@ def main() -> None:
         action="store_true",
         help=(
             "Treat every CSV column as a feature and evaluate using internal "
-            "metrics only (Silhouette and Davies-Bouldin)."
+            "metrics only (Silhouette)."
         ),
     )
     parser.add_argument(

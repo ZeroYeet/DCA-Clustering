@@ -87,25 +87,20 @@ runtime, iterations, and these metrics:
 | Metric | Meaning | Better |
 | --- | --- | --- |
 | Silhouette | Cohesion and separation of the predicted clusters. | Higher |
-| Davies-Bouldin Index | Average similarity between each cluster and its most similar cluster. | Lower |
 | Adjusted Rand Index (ARI) | Agreement between predicted clusters and the provided target labels, adjusted for chance. | Higher |
 
-For compatibility with earlier results and downstream reports, the exported
-`silhouette` value is the standard Silhouette score multiplied by 100; divide
-by 100 to recover its standard `[-1, 1]` scale.
-Silhouette and Davies-Bouldin Index are calculated on the same randomly
-selected subset of up to 2,000 samples when the dataset is larger; the subset
-is reproducible for a given `--random-state` and includes at least one sample
-from every predicted cluster when there are at most 2,000 clusters. If there
-are more clusters than the metric sample limit, these internal metrics are
-left blank rather than calculated on a subset that omits clusters. ARI is
-only available when a target column is included. Silhouette and
-Davies-Bouldin Index are also left blank when the evaluated subset has fewer
+Silhouette is reported on its standard `[-1, 1]` scale. ARI is also reported
+on its standard scale and is only available when a target column is included.
+Silhouette is calculated on up to 2,000 randomly selected samples when the
+dataset is larger; the subset is reproducible for a given `--random-state` and
+includes at least one sample from every predicted cluster when there are at
+most 2,000 clusters. If there are more clusters than the metric sample limit,
+Silhouette is left blank rather than calculated on a subset that omits
+clusters. Silhouette is also left blank when the evaluated subset has fewer
 than two clusters or assigns every sample to its own cluster. The reported
 cluster count always describes the full clustering.
 
-The chart plots all available metrics together; their scales differ, so use
-the CSV or printed values for precise comparisons. Results are overwritten
+The chart plots available Silhouette and ARI values. Results are overwritten
 when the evaluator is run again with the same output paths.
 
 ## References
