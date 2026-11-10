@@ -42,7 +42,7 @@ python evaluate_dca.py
 Evaluate one dataset by its filename without the `.csv` extension:
 
 ```powershell
-python evaluate_dca.py --dataset bankCustomers
+python evaluate_dca.py --dataset bankVN80K
 ```
 
 By default, the evaluator uses the last column as the target, infers the
@@ -50,8 +50,8 @@ number of clusters from its distinct labels, and runs 10 initializations. To
 choose a target column by its header name or zero-based index:
 
 ```powershell
-python evaluate_dca.py --dataset churn --target-column Exited
-python evaluate_dca.py --dataset churn --target-column 13
+python evaluate_dca.py --dataset churn --target-column cluster_group
+python evaluate_dca.py --dataset churn --target-column 24
 ```
 
 To treat a dataset as unlabeled, use every column as a feature and specify
