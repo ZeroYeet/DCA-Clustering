@@ -152,6 +152,8 @@ def print_results(results: list[dict[str, Any]]) -> None:
         ("features", "Features"),
         ("clusters", "Clusters"),
         ("silhouette", "Silhouette"),
+        ("davies_bouldin_index", "Davies-Bouldin"),
+        ("ari", "ARI"),
         ("runtime_seconds", "Runtime (s)"),
     )
     widths = {
@@ -185,11 +187,11 @@ def save_plot(
 ) -> None:
     import matplotlib.pyplot as plt
 
-    metric_names = ("silhouette",)
+    metric_names = ("silhouette", "davies_bouldin_index", "ari")
     metrics = [
         name
         for name in metric_names
-        if any(result[name] is not None for result in results)
+        if any(result.get(name) is not None for result in results)
     ]
     if not metrics:
         raise ValueError("No metrics are available to plot")
@@ -201,7 +203,7 @@ def save_plot(
     for metric_index, metric in enumerate(metrics):
         offset = (metric_index - (len(metrics) - 1) / 2) * width
         values = [
-            result[metric] if result[metric] is not None else 0
+            result.get(metric) if result.get(metric) is not None else 0
             for result in results
         ]
         axis.bar(
