@@ -279,7 +279,10 @@ def main() -> None:
     parser.add_argument(
         "--no-target",
         action="store_true",
-        help="Treat every CSV column as a feature and evaluate with Silhouette only.",
+        help=(
+            "Treat every CSV column as a feature and evaluate using internal "
+            "metrics only (Silhouette and Davies-Bouldin)."
+        ),
     )
     parser.add_argument(
         "--n-clusters",
