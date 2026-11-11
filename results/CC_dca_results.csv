@@ -1,0 +1,2 @@
+dataset,samples,features,clusters,silhouette,ari,runtime_seconds,iterations
+CC.csv,8950,17,3,0.35654478078543334,,7.3435411999962525,38

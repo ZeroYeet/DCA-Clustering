@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from sklearn.decomposition import PCA
 from sklearn.metrics import (
     adjusted_rand_score,
     silhouette_score,
@@ -65,6 +66,93 @@ def _sample_indices_preserving_clusters(
     return sample_indices
 
 
+def save_pca_plot(
+    features: np.ndarray,
+    predicted_labels: np.ndarray,
+    true_labels: np.ndarray | None,
+    output_path: Path,
+    *,
+    random_state: int,
+    sample_limit: int = 5000,
+) -> None:
+    import matplotlib.pyplot as plt
+
+    sample_size = min(sample_limit, len(predicted_labels))
+    if true_labels is None:
+        sample_labels = predicted_labels
+    else:
+        sample_labels = np.asarray(
+            [
+                f"{cluster}\0{label}"
+                for cluster, label in zip(predicted_labels, true_labels)
+            ]
+        )
+
+    sample_indices = _sample_indices_preserving_clusters(
+        sample_labels,
+        sample_size,
+        random_state,
+    )
+    if sample_indices is None:
+        sample_indices = np.random.default_rng(random_state).choice(
+            len(predicted_labels),
+            size=sample_size,
+            replace=False,
+        )
+
+    sampled_features = features[sample_indices]
+    component_count = min(2, sampled_features.shape[0], sampled_features.shape[1])
+    pca = PCA(n_components=component_count, random_state=random_state)
+    projected = pca.fit_transform(sampled_features)
+    if component_count == 1:
+        projected = np.column_stack((projected[:, 0], np.zeros(sample_size)))
+
+    label_sets = [("DCA clusters", predicted_labels[sample_indices])]
+    if true_labels is not None:
+        label_sets.append(("True labels", true_labels[sample_indices]))
+
+    figure, axes = plt.subplots(
+        1,
+        len(label_sets),
+        figsize=(8 * len(label_sets), 6),
+        squeeze=False,
+    )
+    explained_variance = pca.explained_variance_ratio_ * 100
+    for axis, (label_name, labels) in zip(axes[0], label_sets):
+        categories, category_codes = np.unique(labels, return_inverse=True)
+        scatter = axis.scatter(
+            projected[:, 0],
+            projected[:, 1],
+            c=category_codes,
+            cmap="tab20",
+            s=8,
+            alpha=0.6,
+            rasterized=True,
+        )
+        colorbar = figure.colorbar(
+            scatter,
+            ax=axis,
+            ticks=np.arange(len(categories)),
+        )
+        colorbar.ax.set_yticklabels([str(category) for category in categories])
+        axis.set_title(f"PCA colored by {label_name}")
+        axis.set_xlabel(f"PC1 ({explained_variance[0]:.1f}% variance)")
+        axis.set_ylabel(
+            f"PC2 ({explained_variance[1]:.1f}% variance)"
+            if len(explained_variance) > 1
+            else "PC2 (0% variance)"
+        )
+
+    figure.suptitle(
+        f"PCA visualization: {len(sample_indices):,} of "
+        f"{len(predicted_labels):,} samples"
+    )
+    figure.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    figure.savefig(output_path, dpi=160)
+    plt.close(figure)
+
+
 def evaluate_dataset(
     dataset_path: Path,
     *,
@@ -78,6 +166,7 @@ def evaluate_dataset(
     tol: float = 1e-6,
     random_state: int = 42,
     progress_callback: Callable[[int, int], None] | None = None,
+    pca_plot_path: Path | None = None,
 ) -> dict[str, Any]:
     """Run IP-DCA on one CSV dataset from the local data directory."""
     features, true_labels = load_csv_file(
@@ -123,6 +212,14 @@ def evaluate_dataset(
             silhouette = float(silhouette_score(metric_features, metric_labels))
     if true_labels is not None:
         ari = float(adjusted_rand_score(true_labels, predicted_labels))
+    if pca_plot_path is not None:
+        save_pca_plot(
+            features,
+            predicted_labels,
+            true_labels,
+            pca_plot_path,
+            random_state=random_state,
+        )
 
     return {
         "dataset": dataset_path.name,
@@ -167,49 +264,6 @@ def save_csv(results: list[dict[str, Any]], output_path: Path) -> None:
         writer = csv.DictWriter(output_file, fieldnames=list(results[0]))
         writer.writeheader()
         writer.writerows(results)
-
-
-def save_plot(
-    results: list[dict[str, Any]],
-    output_path: Path,
-    *,
-    title: str,
-) -> None:
-    import matplotlib.pyplot as plt
-
-    metric_names = ("silhouette", "ari")
-    metrics = [
-        name
-        for name in metric_names
-        if any(result.get(name) is not None for result in results)
-    ]
-    if not metrics:
-        raise ValueError("No metrics are available to plot")
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    figure, axis = plt.subplots(figsize=(max(8, len(results) * 1.5), 5))
-    width = 0.8 / len(metrics)
-    positions = list(range(len(results)))
-    for metric_index, metric in enumerate(metrics):
-        offset = (metric_index - (len(metrics) - 1) / 2) * width
-        values = [
-            result.get(metric) if result.get(metric) is not None else 0
-            for result in results
-        ]
-        axis.bar(
-            [position + offset for position in positions],
-            values,
-            width,
-            label=metric.upper(),
-        )
-
-    axis.set_xticks(positions, [result["dataset"] for result in results])
-    axis.set_ylabel("Score")
-    axis.set_title(title)
-    axis.legend()
-    figure.tight_layout()
-    figure.savefig(output_path)
-    plt.close(figure)
 
 
 def format_duration(seconds: float) -> str:
@@ -292,14 +346,10 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=RESULTS_DIR / "dca_results.csv",
-        help="CSV output path.",
-    )
-    parser.add_argument(
-        "--plot",
-        type=Path,
-        default=RESULTS_DIR / "dca_results.png",
-        help="Chart output path (PNG, SVG, or PDF).",
+        help=(
+            "CSV output path (default: results/<dataset>_dca_results.csv "
+            "for one dataset, results/dca_results.csv for all datasets)."
+        ),
     )
     args = parser.parse_args()
 
@@ -313,6 +363,12 @@ def main() -> None:
         if args.dataset == "all"
         else [path for path in dataset_paths if path.stem == args.dataset]
     )
+    default_output = (
+        RESULTS_DIR / f"{selected_paths[0].stem}_dca_results.csv"
+        if len(selected_paths) == 1
+        else RESULTS_DIR / "dca_results.csv"
+    )
+    output_path = args.output or default_output
     results = []
     total_runs = len(selected_paths) * args.n_init
     progress_started = time.perf_counter()
@@ -340,14 +396,13 @@ def main() -> None:
                 tol=args.tol,
                 random_state=args.random_state,
                 progress_callback=update_progress,
+                pca_plot_path=RESULTS_DIR / f"{path.stem}_pca.png",
             )
         )
 
     print_results(results)
-    save_csv(results, args.output)
-    print(f"\nCSV exported to: {args.output}")
-    save_plot(results, args.plot, title="IP-DCA evaluation metrics")
-    print(f"Chart exported to: {args.plot}")
+    save_csv(results, output_path)
+    print(f"\nCSV exported to: {output_path}")
 
 
 if __name__ == "__main__":

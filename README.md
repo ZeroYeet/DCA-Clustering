@@ -61,6 +61,29 @@ the number of clusters. In this mode, no target column is removed:
 python evaluate_dca.py --dataset churn --no-target --n-clusters 3
 ```
 
+## Estimate the number of clusters with the elbow method
+
+Run the separate elbow script on one dataset:
+
+```powershell
+python elbow_dca.py --dataset bankVN80k_2 --target-column cluster_group
+```
+
+By default, it tests `K=2` through `K=10` on one reproducible sample of up to
+5,000 rows, with 3 DCA initializations per K. It saves the MSSC values to
+`results\<dataset>_elbow.csv` and an elbow chart to
+`results\<dataset>_elbow.png`. Override the search range, sample size, or
+initializations as needed:
+
+```powershell
+python elbow_dca.py --dataset bankVN80k_2 --target-column cluster_group --min-k 2 --max-k 8 --sample-size 10000 --n-init 5
+```
+
+The suggested K is the point farthest from the straight line joining the
+first and last points of the MSSC curve. This is a heuristic; inspect the
+curve and validate the resulting clusters for the dataset and use case.
+For unlabeled data, add `--no-target` to use every column as a feature.
+
 Useful options:
 
 | Option | Description |
@@ -75,8 +98,8 @@ Useful options:
 | `--max-iter N` | Maximum iterations per initialization (default: `1000`). |
 | `--tol VALUE` | Convergence tolerance (default: `1e-6`). |
 | `--random-state N` | Set the random seed (default: `42`). |
-| `--output PATH` | CSV results path (default: `results\dca_results.csv`). |
-| `--plot PATH` | Chart path (default: `results\dca_results.png`). |
+| `--output PATH` | CSV results path; defaults to `results\<dataset>_dca_results.csv` for one dataset, or `results\dca_results.csv` for all datasets. |
+| `--plot PATH` | Chart path; defaults to `results\<dataset>_dca_results.png` for one dataset, or `results\dca_results.png` for all datasets. |
 
 ## Evaluation metrics and outputs
 
@@ -102,6 +125,12 @@ cluster count always describes the full clustering.
 
 The chart plots available Silhouette and ARI values. Results are overwritten
 when the evaluator is run again with the same output paths.
+
+The evaluator also saves a separate PCA 2D visualization for each dataset to
+`results\<dataset>_pca.png`. When target labels are available, the figure shows
+two panels: one colored by the DCA clusters and one by the true labels. PCA is
+fit on a reproducible sample of up to 5,000 rows for large datasets; the plot
+is for visualization only and does not affect clustering or metric values.
 
 ## References
 
