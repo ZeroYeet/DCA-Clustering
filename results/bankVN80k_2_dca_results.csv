@@ -1,0 +1,2 @@
+dataset,samples,features,clusters,silhouette,ari,runtime_seconds,iterations
+bankVN80k_2.csv,80000,63,4,0.06856698132419177,0.06910194059618228,1767.8774399000004,1001
