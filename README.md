@@ -17,11 +17,6 @@ Place CSV files in `data\`. The repository includes:
 | `bankVN80k.csv` | [Vietnam Bank Churn Dataset 2025](https://www.kaggle.com/datasets/tranhuunhan/vietnam-bank-churn-dataset-2025) |
 | `CC.csv` | [Credit Card Dataset for Clustering](https://www.kaggle.com/datasets/arjunbhasin2013/ccdata) |
 
-The loader detects common CSV delimiters and, by default, infers whether the
-first row is a header. It treats the last column as the target label, excludes
-the target and columns recognized as identifiers from the features, imputes
-missing numeric and categorical values, one-hot encodes categorical features,
-and scales features to the range `[0, 1]`.
 
 ## Requirements
 
@@ -45,20 +40,17 @@ Evaluate one dataset by its filename without the `.csv` extension:
 python evaluate_dca.py --dataset bankVN80K
 ```
 
-By default, the evaluator uses the last column as the target, infers the
-number of clusters from its distinct labels, and runs 10 initializations. To
-choose a target column by its header name or zero-based index:
+To choose a target column by its header name or zero-based index:
 
 ```powershell
 python evaluate_dca.py --dataset churn --target-column cluster_group
 python evaluate_dca.py --dataset churn --target-column 24
 ```
 
-To treat a dataset as unlabeled, use every column as a feature and specify
-the number of clusters. In this mode, no target column is removed:
+To treat a dataset as unlabeled:
 
 ```powershell
-python evaluate_dca.py --dataset churn --no-target --n-clusters 3
+python evaluate_dca.py --dataset churn --no-target
 ```
 
 ## Estimate the number of clusters with the elbow method
@@ -72,16 +64,13 @@ python elbow_dca.py --dataset bankVN80k_2 --target-column cluster_group
 By default, it tests `K=2` through `K=10` on one reproducible sample of up to
 5,000 rows, with 3 DCA initializations per K. It saves the MSSC values to
 `results\<dataset>_elbow.csv` and an elbow chart to
-`results\<dataset>_elbow.png`. Override the search range, sample size, or
-initializations as needed:
+`results\<dataset>_elbow.png`.
+
+Override the search range, sample size, or initializations as needed:
 
 ```powershell
 python elbow_dca.py --dataset bankVN80k_2 --target-column cluster_group --min-k 2 --max-k 8 --sample-size 10000 --n-init 5
 ```
-
-The suggested K is the point farthest from the straight line joining the
-first and last points of the MSSC curve. This is a heuristic; inspect the
-curve and validate the resulting clusters for the dataset and use case.
 For unlabeled data, add `--no-target` to use every column as a feature.
 
 Useful options:
