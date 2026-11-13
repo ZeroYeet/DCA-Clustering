@@ -41,11 +41,11 @@ def penalized_objective(X, U, V, t):
 
 
 def _rho_bound(X, r):
-    """Công thức (24): rho >= n [ (xi^2/n + 1) + sqrt((xi^2/n + 1)^2 + 12 xi^2 / n) ]."""
+    """Cận rho theo (15): n[(alpha^2/n + 1) + sqrt((alpha^2/n + 1)^2 + 16 alpha^2/n)]."""
     n = X.shape[0]
-    xi = r + np.linalg.norm(X, axis=1).max()
-    a = xi ** 2 / n + 1.0
-    return n * (a + np.sqrt(a ** 2 + 12.0 * xi ** 2 / n))
+    alpha = r + np.linalg.norm(X, axis=1).max()
+    a = alpha ** 2 / n + 1.0
+    return n * (a + np.sqrt(a ** 2 + 16.0 * alpha ** 2 / n))
 
 
 def _step(U, V, X, rho, t, r):
@@ -138,29 +138,11 @@ def _ip_dca_single(
     U = np.zeros((c, n))
     U[_sq_dists(V, X).argmin(axis=0), np.arange(n)] = 1.0
 
-    # rho khởi tạo theo (24), rồi giảm dần (thủ tục "Update rho", mục 2.3)
-    rho_max = _rho_bound(X, r)
-    rho, tau = rho_max, 0.9
+    # Giữ rho cố định theo điều kiện lồi trong (15).
+    rho = _rho_bound(X, r)
     history = [penalized_objective(X, U, V, t)]
-    warmup = 0
-    for _ in range(min(200, max_iter)):
-        Un, Vn = _step(U, V, X, tau * rho, t, r)
-        f_new = penalized_objective(X, Un, Vn, t)
-        if f_new > history[-1]:
-            break
-        U, V, rho = Un, Vn, tau * rho
-        history.append(f_new)
-        warmup += 1
-
-    n_iter = warmup
-    for n_iter in range(warmup + 1, max_iter + 1):
+    for _ in range(max_iter):
         Un, Vn = _step(U, V, X, rho, t, r)
-        # nếu F1 tăng thì rho quá nhỏ (H1 mất tính lồi): tăng rho rồi thử lại
-        tries = 0
-        while penalized_objective(X, Un, Vn, t) > history[-1] + 1e-12 and rho < rho_max and tries < 100:
-            rho = min(rho / tau, rho_max)
-            Un, Vn = _step(U, V, X, rho, t, r)
-            tries += 1
         diff = np.sqrt(((Un - U) ** 2).sum() + ((Vn - V) ** 2).sum())
         U, V = Un, Vn
         history.append(penalized_objective(X, U, V, t))
