@@ -58,6 +58,7 @@ def run_elbow_search(
     max_iter: int = 1000,
     tol: float = 1e-6,
     random_state: int = 42,
+    vns_init: bool = True,
 ) -> tuple[list[dict[str, Any]], int | None]:
     features, _ = load_csv_file(
         dataset_path,
@@ -112,11 +113,19 @@ def run_elbow_search(
             random_state=random_state + cluster_count,
             n_init=n_init,
             progress_callback=update_progress,
+            vns_init=vns_init,
         )
         results.append(
             {
                 "k": cluster_count,
                 "mssc": result["mssc"],
+                "soft_mssc": result["soft_mssc"],
+                "hard_mssc": result["hard_mssc"],
+                "penalty": result["penalty"],
+                "normalized_penalty": result["normalized_penalty"],
+                "rho": result["rho"],
+                "rho_reduction_steps": result["rho_reduction_steps"],
+                "vns_init": result["vns_init"],
                 "penalized_objective": result["penalized_objective"],
                 "clusters_found": len(np.unique(result["labels"])),
                 "iterations": result["iterations"],
@@ -218,6 +227,11 @@ def main() -> None:
     parser.add_argument("--max-iter", type=int, default=1000)
     parser.add_argument("--tol", type=float, default=1e-6)
     parser.add_argument("--random-state", type=int, default=42)
+    parser.add_argument(
+        "--no-vns",
+        action="store_true",
+        help="Disable the VNS initialization step.",
+    )
     parser.add_argument("--output", type=Path)
     parser.add_argument("--plot", type=Path)
     args = parser.parse_args()
@@ -249,6 +263,7 @@ def main() -> None:
         max_iter=args.max_iter,
         tol=args.tol,
         random_state=args.random_state,
+        vns_init=not args.no_vns,
     )
 
     output_path = args.output or RESULTS_DIR / f"{args.dataset}_elbow.csv"

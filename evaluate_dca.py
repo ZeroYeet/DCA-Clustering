@@ -167,6 +167,7 @@ def evaluate_dataset(
     random_state: int = 42,
     progress_callback: Callable[[int, int], None] | None = None,
     pca_plot_path: Path | None = None,
+    vns_init: bool = True,
 ) -> dict[str, Any]:
     """Run IP-DCA on one CSV dataset from the local data directory."""
     features, true_labels = load_csv_file(
@@ -187,6 +188,7 @@ def evaluate_dataset(
         random_state=random_state,
         n_init=n_init,
         progress_callback=progress_callback,
+        vns_init=vns_init,
     )
     runtime_seconds = time.perf_counter() - start
 
@@ -226,6 +228,14 @@ def evaluate_dataset(
         "samples": features.shape[0],
         "features": features.shape[1],
         "clusters": predicted_cluster_count,
+        # "vns_init": result["vns_init"],
+        # "rho": result["rho"],
+        # "rho_reduction_steps": result["rho_reduction_steps"],
+        # "soft_mssc": result["soft_mssc"],
+        # "hard_mssc": result["hard_mssc"],
+        # "penalty": result["penalty"],
+        # "normalized_penalty": result["normalized_penalty"],
+        # "penalized_objective": result["penalized_objective"],
         "silhouette": silhouette,
         "ari": ari,
         "runtime_seconds": runtime_seconds,
@@ -239,6 +249,13 @@ def print_results(results: list[dict[str, Any]]) -> None:
         ("samples", "Samples"),
         ("features", "Features"),
         ("clusters", "Clusters"),
+        # ("vns_init", "VNS init"),
+        # ("rho", "Rho"),
+        # ("rho_reduction_steps", "Rho reductions"),
+        # ("soft_mssc", "Soft MSSC"),
+        # ("hard_mssc", "Hard MSSC"),
+        # ("penalty", "Penalty"),
+        # ("normalized_penalty", "Norm. penalty"),
         ("silhouette", "Silhouette"),
         ("ari", "ARI"),
         ("runtime_seconds", "Runtime (s)"),
@@ -344,6 +361,11 @@ def main() -> None:
     parser.add_argument("--tol", type=float, default=1e-6)
     parser.add_argument("--random-state", type=int, default=42)
     parser.add_argument(
+        "--no-vns",
+        action="store_true",
+        help="Disable the VNS initialization step.",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         help=(
@@ -397,6 +419,7 @@ def main() -> None:
                 random_state=args.random_state,
                 progress_callback=update_progress,
                 pca_plot_path=RESULTS_DIR / f"{path.stem}_pca.png",
+                vns_init=not args.no_vns,
             )
         )
 

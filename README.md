@@ -87,6 +87,7 @@ Useful options:
 | `--max-iter N` | Maximum iterations per initialization (default: `1000`). |
 | `--tol VALUE` | Convergence tolerance (default: `1e-6`). |
 | `--random-state N` | Set the random seed (default: `42`). |
+| `--no-vns` | Disable VNS refinement of each initialization. |
 | `--output PATH` | CSV results path; defaults to `results\<dataset>_dca_results.csv` for one dataset, or `results\dca_results.csv` for all datasets. |
 | `--plot PATH` | Chart path; defaults to `results\<dataset>_dca_results.png` for one dataset, or `results\dca_results.png` for all datasets. |
 
@@ -98,8 +99,33 @@ runtime, iterations, and these metrics:
 
 | Metric | Meaning | Better |
 | --- | --- | --- |
+| Soft MSSC | DCA objective `F(U, V)` evaluated with the possibly fractional membership matrix. | Lower |
+| Hard MSSC | Sum of squared distances for the returned hard labels, with centers recomputed as cluster means. | Lower |
+| Penalty | Raw exact-penalty value `p(U) = sum(u * (1 - u))`; zero means memberships are integral. | Lower |
+| Normalized penalty | Raw penalty divided by its maximum over column-simplex memberships; ranges from 0 (hard) to 1 (maximally diffuse). | Lower |
 | Silhouette | Cohesion and separation of the predicted clusters. | Higher |
 | Adjusted Rand Index (ARI) | Agreement between predicted clusters and the provided target labels, adjusted for chance. | Higher |
+
+The result key and elbow CSV column `mssc` remain aliases for `soft_mssc` for
+compatibility.
+`hard_mssc` is computed from `argmax(U)` labels and their recomputed centroids;
+it can therefore differ from the soft objective. The penalized objective is
+still `soft_mssc + t * penalty`. The elbow CSV retains its `mssc` column and
+adds explicit `soft_mssc`, `hard_mssc`, and penalty diagnostics; the existing
+elbow estimate continues to use `mssc`.
+
+IP-DCA starts `rho` at its theoretical bound, then attempts up to 20 geometric
+reductions by a factor of 0.9, accepting only non-increasing penalized
+objectives. If a later step with the reduced value increases the objective, it
+retries that step with the theoretical bound. The reported `rho` and
+`rho_reduction_steps` make this adjustment visible. Squared distances are
+computed in bounded-size chunks to avoid allocating a full
+clusters-by-samples-by-features temporary array.
+
+By default, each initialization is refined with bounded VNS: up to 10
+Hamming-neighborhood shakes (neighborhood sizes 1–5), each followed by two
+Lloyd steps, retaining only hard-MSSC improvements. Use `--no-vns` to compare
+against the original initialization strategy.
 
 Silhouette is reported on its standard `[-1, 1]` scale. ARI is also reported
 on its standard scale and is only available when a target column is included.
